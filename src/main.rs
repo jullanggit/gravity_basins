@@ -3,14 +3,45 @@ use nannou::{
     prelude::*,
 };
 
-struct Model {}
+struct Model {
+    bind_group: wgpu::BindGroup,
+    render_pipeline: wgpu::RenderPipeline,
+}
 impl Model {
     fn new(app: &App) -> Self {
         // Create a new window
-        app.new_window().fullscreen().view(view).build().unwrap();
+        let window_id = app.new_window().fullscreen().view(view).build().unwrap();
+        let window = app.window(window_id).unwrap();
+        let device = window.device();
+        let format = Frame::TEXTURE_FORMAT;
+
+        let vs_desc = wgpu::include_wgsl!("vertex.wgsl");
+        let fs_desc = wgpu::include_wgsl!("fragment.wgsl");
         Self {}
     }
 }
+
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct Vertex {
+    position: [f32; 2],
+}
+
+// Vertices of a rectangle
+const VERTICES: [Vertex; 4] = [
+    Vertex {
+        position: [-1.0, 1.0],
+    },
+    Vertex {
+        position: [-1.0, -1.0],
+    },
+    Vertex {
+        position: [1.0, 1.0],
+    },
+    Vertex {
+        position: [1.0, -1.0],
+    },
+];
 
 fn main() {
     nannou::app(Model::new)
