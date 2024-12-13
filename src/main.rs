@@ -9,6 +9,14 @@ struct AppState {
     #[size(runtime)]
     gravitons: Vec<Graviton>,
 }
+impl AppState {
+    /// Converts the app state to wgsl bytes
+    fn as_wgsl_bytes(&self) -> encase::internal::Result<Vec<u8>> {
+        let mut buffer = encase::UniformBuffer::new(Vec::new());
+        buffer.write(self)?;
+        Ok(buffer.into_inner())
+    }
+}
 
 #[derive(ShaderType)]
 struct Graviton {
