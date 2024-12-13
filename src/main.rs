@@ -17,6 +17,18 @@ impl AppState {
         Ok(buffer.into_inner())
     }
 }
+impl Default for AppState {
+    fn default() -> Self {
+        Self {
+            pos_x: 0.,
+            pos_y: 0.,
+            zoom: 1.,
+            // TODO: figure out how to initialise this
+            gravitons_length: ArrayLength,
+            gravitons: Vec::new(),
+        }
+    }
+}
 
 #[derive(ShaderType)]
 struct Graviton {
