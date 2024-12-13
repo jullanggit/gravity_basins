@@ -1,20 +1,40 @@
+struct AppState {
+    pos_x: f32,
+    pos_y: f32,
+    zoom: f32,
+    // TODO: Add the diffrerent gravitons and their data
+}
+
+struct VertexInput {
+    @builtin(vertex_index) vertex_index: u32,
+};
+
+struct VertexOutput {
+    @builtin(position) position: vec4<f32>,
+    @location(0) coord: vec2<f32>,
+};
+
+@group(0)
+@binding(0)
+var<uniform> app_state: AppState;
+
 @vertex
-fn vs_main(@builtin(vertex_index) vertex_index: u32) -> @builtin(position) vec4<f32> {
-    // Define a full-screen triangle
-    var positions = array<vec2<f32>, 3>(
-        vec2<f32>(-1.0, -1.0), // Bottom-left
-        vec2<f32>(3.0, -1.0),  // Bottom-right (out of bounds to form a triangle)
-        vec2<f32>(-1.0, 3.0)   // Top-left (out of bounds to form a triangle)
+fn vs_main(in: VertexInput) -> VertexOutput {
+    // Full-screen triangle
+    var vertices = array<vec2<f32>, 3>(
+        vec2<f32>(-1., 1.),
+        vec2<f32>(3.0, 1.),
+        vec2<f32>(-1., -3.0),
     );
-    let pos = positions[vertex_index];
-    return vec4<f32>(pos, 0.0, 1.0);
+
+    var out: VertexOutput;
+    out.coord = vertices[in.vertex_index];
+    out.position = vec4<f32>(out.coord, 0.0, 1.0);
+
+    return out;
 }
 
 @fragment
-fn fs_main(@builtin(position) frag_coord: vec4<f32>) -> @location(0) vec4<f32> {
-    // Map the fragment coordinates to the range [0, 1]
-    let u_position = frag_coord.xy / vec2<f32>(640.0, 480.0); // Assuming a 640x480 resolution
-
-    // Color based on position: red for x, green for y
-    return vec4<f32>(u_position.x, u_position.y, 0.5, 1.0); // Blue is constant, alpha is 1.0
+fn fs_main(in: VertexOutput) -> @location(0) vec4<f32> {
+    return vec4<f32>(255, 0, 0, 1.0); // Blue is constant, alpha is 1.0
 }
