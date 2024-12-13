@@ -7,7 +7,7 @@ struct Model {}
 impl Model {
     fn new(app: &App) -> Self {
         // Create a new window
-        app.new_window().fullscreen().view(view).build().unwrap();
+        app.new_window().size(512, 512).view(view).build().unwrap();
         Self {}
     }
 }
@@ -22,11 +22,10 @@ fn main() {
 fn event(_app: &App, _model: &mut Model, _event: Event) {}
 
 fn view(app: &App, _model: &Model, frame: Frame) {
-    let win = app.window_rect();
-    let width = win.w().ceil() as u32;
-    let height = win.h().ceil() as u32;
+    let scale_factor = app.main_window().scale_factor();
 
-    let mut img_buffer = RgbImage::new(width, height);
+    let win = app.window_rect();
+    let mut img_buffer = RgbImage::new(512, 512);
 
     for (x, y, pixel) in img_buffer.enumerate_pixels_mut() {
         *pixel = [255, 0, 0].into();
