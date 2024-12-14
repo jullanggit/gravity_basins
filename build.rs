@@ -24,7 +24,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     .inspect_err(|error| error.emit_to_stderr_with_path(&wgsl_source, WGSL_FILE))
     .map_err(|_| "Failed to validate shader")?;
 
-    std::fs::write(WGSL_FILE, text.as_bytes())?;
+    std::fs::write("src/shader.rs", text.as_bytes())?;
 
     Ok(())
 }
