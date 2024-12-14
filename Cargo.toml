@@ -8,3 +8,6 @@ edition = "2024"
 [dependencies]
 encase = "0.10.0"
 wgpu = { version = "23.0.1", default-features = false, features = ["wgsl"] }
+
+[build-dependencies]
+wgsl_to_wgpu = "0.12.0"
