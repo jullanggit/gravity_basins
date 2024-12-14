@@ -1,8 +1,17 @@
+const MAX_GRAVITONS: u32 = 256;
+
 struct AppState {
-    pos_x: f32,
-    pos_y: f32,
+    position: vec2<f32>,
     zoom: f32,
-    // TODO: Add the diffrerent gravitons and their data
+    drag: f32,
+    delta_t: f32,
+    gravitons_length: u32,
+    gravitons: array<Graviton, MAX_GRAVITONS>,
+}
+
+struct Graviton {
+    position: vec2<f32>,
+    color: vec4<f32>,
 }
 
 struct VertexInput {
