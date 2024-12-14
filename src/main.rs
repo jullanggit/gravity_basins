@@ -5,6 +5,8 @@ struct AppState {
     pos_x: f32,
     pos_y: f32,
     zoom: f32,
+    drag: f32,
+    delta_t: f32,
     gravitons_length: ArrayLength,
     #[size(runtime)]
     gravitons: Vec<Graviton>,
@@ -23,6 +25,8 @@ impl Default for AppState {
             pos_x: 0.,
             pos_y: 0.,
             zoom: 1.,
+            drag: 0.02,
+            delta_t: 0.05,
             // TODO: figure out how to initialise this
             gravitons_length: ArrayLength,
             gravitons: Vec::new(),
