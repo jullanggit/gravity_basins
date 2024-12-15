@@ -1,13 +1,15 @@
 use std::{mem::MaybeUninit, sync::Arc};
 
-use encase::{ShaderSize, UniformBuffer};
+use encase::ShaderSize;
 use shader::{AppState, Graviton, Gravitons, bind_groups::BindGroup0};
 use wgpu::{
     Backends, Buffer, BufferDescriptor, BufferUsages, Device, DeviceDescriptor, Features, Instance,
     InstanceDescriptor, Limits, MemoryHints, MultisampleState, PowerPreference, PrimitiveState,
     Queue, RenderPipeline, RequestAdapterOptions, Surface, SurfaceConfiguration, VertexStepMode,
 };
-use winit::{dpi::PhysicalSize, event_loop::EventLoop, window::Window};
+use winit::{
+    application::ApplicationHandler, dpi::PhysicalSize, event_loop::EventLoop, window::Window,
+};
 
 #[allow(dead_code)]
 mod shader;
@@ -145,7 +147,7 @@ impl Gravitons {
     }
 }
 
-impl Default for shader::AppState {
+impl Default for AppState {
     fn default() -> Self {
         Self {
             position: [0., 0.],
@@ -156,4 +158,24 @@ impl Default for shader::AppState {
         }
     }
 }
+impl ApplicationHandler for AppState {
+    fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {}
+    fn window_event(
+        &mut self,
+        event_loop: &winit::event_loop::ActiveEventLoop,
+        window_id: winit::window::WindowId,
+        event: winit::event::WindowEvent,
+    ) {
+    }
+}
+
+async fn run(event_loop: EventLoop<()>, window: Arc<Window>) {
+    let mut wgpu_state = WgpuState::new(window).await;
+    let mut state = AppState::default();
+
+    let main_window_id = wgpu_state.window.id();
+
+    event_loop.run_app(&mut state).unwrap();
+}
+
 fn main() {}
