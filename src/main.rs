@@ -145,4 +145,15 @@ impl Gravitons {
     }
 }
 
+impl Default for shader::AppState {
+    fn default() -> Self {
+        Self {
+            position: [0., 0.],
+            zoom: 1.,
+            drag: 0.02,
+            delta_t: 0.05,
+            gravitons: unsafe { shader::Gravitons::new() },
+        }
+    }
+}
 fn main() {}
