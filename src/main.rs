@@ -129,4 +129,20 @@ impl WgpuState {
     }
 }
 
+impl Gravitons {
+    /// Uses unitialised memory, any reads beyond the length are undefined behavior
+    #[allow(clippy::uninit_assumed_init)]
+    #[allow(invalid_value)]
+    unsafe fn new() -> Self {
+        Self {
+            length: 0,
+            gravitons: unsafe { MaybeUninit::uninit().assume_init() },
+        }
+    }
+    fn push(&mut self, graviton: Graviton) {
+        self.gravitons[self.length as usize] = graviton;
+        self.length += 1;
+    }
+}
+
 fn main() {}
