@@ -5,7 +5,11 @@ struct AppState {
     zoom: f32,
     drag: f32,
     delta_t: f32,
-    gravitons_length: u32,
+    gravitons: Gravitons,
+}
+
+struct Gravitons {
+    length: u32,
     gravitons: array<Graviton, MAX_GRAVITONS>,
 }
 

@@ -8,13 +8,18 @@ pub struct Graviton {
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, encase :: ShaderType)]
+pub struct Gravitons {
+    pub length: u32,
+    pub gravitons: [Graviton; 256],
+}
+#[repr(C)]
+#[derive(Debug, Copy, Clone, PartialEq, encase :: ShaderType)]
 pub struct AppState {
     pub position: [f32; 2],
     pub zoom: f32,
     pub drag: f32,
     pub delta_t: f32,
-    pub gravitons_length: u32,
-    pub gravitons: [Graviton; 256],
+    pub gravitons: Gravitons,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq)]
