@@ -16,7 +16,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     text += &create_shader_module(&wgsl_source, "shader.wgsl", WriteOptions {
         derive_encase_host_shareable: true,
-        matrix_vector_types: MatrixVectorTypes::Rust,
+        matrix_vector_types: MatrixVectorTypes::Glam,
         rustfmt: true,
         validate: Some(Default::default()),
         ..Default::default()

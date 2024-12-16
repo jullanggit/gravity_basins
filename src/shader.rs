@@ -3,8 +3,8 @@
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, encase :: ShaderType)]
 pub struct Graviton {
-    pub position: [f32; 2],
-    pub color: [f32; 4],
+    pub position: glam::Vec2,
+    pub color: glam::Vec4,
 }
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, encase :: ShaderType)]
@@ -15,7 +15,7 @@ pub struct Gravitons {
 #[repr(C)]
 #[derive(Debug, Copy, Clone, PartialEq, encase :: ShaderType)]
 pub struct AppState {
-    pub position: [f32; 2],
+    pub position: glam::Vec2,
     pub zoom: f32,
     pub drag: f32,
     pub delta_t: f32,
