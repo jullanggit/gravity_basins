@@ -7,8 +7,7 @@ use wgpu::{
     DeviceDescriptor, Features, Instance, InstanceDescriptor, Limits, LoadOp, MemoryHints,
     MultisampleState, Operations, PowerPreference, PrimitiveState, Queue,
     RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RequestAdapterOptions,
-    StoreOp, Surface, SurfaceConfiguration, TextureViewDescriptor, VertexStepMode,
-    util::{BufferInitDescriptor, DeviceExt},
+    StoreOp, Surface, SurfaceConfiguration, TextureViewDescriptor, VertexState,
 };
 use winit::{
     application::ApplicationHandler,
@@ -35,7 +34,6 @@ struct WgpuState {
     queue: Queue,
     size: PhysicalSize<u32>,
     config: SurfaceConfiguration,
-    vertex_buffer: Buffer,
     pipeline: RenderPipeline,
     bind_group0: BindGroup0,
     uniform_buffer: Buffer,
@@ -93,7 +91,12 @@ impl WgpuState {
         let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
             label: Some("Render pipeline"),
             layout: Some(&render_pipeline_layout),
-            vertex: shader::vertex_state(&module, &shader::vs_main_entry(VertexStepMode::Vertex)),
+            vertex: VertexState {
+                module: &module,
+                entry_point: Some(shader::ENTRY_VS_MAIN),
+                compilation_options: Default::default(),
+                buffers: &[],
+            },
             fragment: Some(shader::fragment_state(
                 &module,
                 &shader::fs_main_entry([Some(surface_format.into())]),
@@ -122,13 +125,6 @@ impl WgpuState {
             },
         );
 
-        // Dont know why i need to do this, the wgpu and wgsl_to_wgpu examples differ here
-        let vertex_buffer = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("Vertex Buffer"),
-            contents: &[],
-            usage: BufferUsages::VERTEX,
-        });
-
         Self {
             window,
             surface,
@@ -136,7 +132,6 @@ impl WgpuState {
             queue,
             size,
             config,
-            vertex_buffer,
             pipeline,
             bind_group0,
             uniform_buffer,
@@ -209,7 +204,7 @@ impl State {
                 occlusion_query_set: None,
             });
             render_pass.set_pipeline(&wgpu_state.pipeline);
-            render_pass.set_vertex_buffer(0, wgpu_state.vertex_buffer.slice(..));
+            // render_pass.set_vertex_buffer(0, wgpu_state.vertex_buffer.slice(..));
 
             let mut app_state_bytes = UniformBuffer::new(Vec::<u8>::new());
             app_state_bytes.write(&self.app).unwrap();
