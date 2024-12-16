@@ -244,7 +244,8 @@ impl ApplicationHandler for State {
                 wgpu_state.resize(new_size);
                 wgpu_state.window.request_redraw();
             }
-            WindowEvent::CloseRequested => todo!(),
+            // TODO: Maybe change this to exit a bit more cleanly
+            WindowEvent::CloseRequested => panic!("Close requested"),
             WindowEvent::Destroyed => todo!(),
             WindowEvent::CursorMoved {
                 device_id,
