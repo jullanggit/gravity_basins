@@ -1,18 +1,30 @@
-use std::{mem::MaybeUninit, sync::Arc};
+use std::{borrow::Cow, mem::MaybeUninit, sync::Arc};
 
-use encase::ShaderSize;
+use encase::{ShaderSize, UniformBuffer};
 use shader::{AppState, Graviton, Gravitons, bind_groups::BindGroup0};
 use wgpu::{
-    Backends, Buffer, BufferDescriptor, BufferUsages, Device, DeviceDescriptor, Features, Instance,
-    InstanceDescriptor, Limits, MemoryHints, MultisampleState, PowerPreference, PrimitiveState,
-    Queue, RenderPipeline, RequestAdapterOptions, Surface, SurfaceConfiguration, VertexStepMode,
+    Backends, Buffer, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Device,
+    DeviceDescriptor, Features, Instance, InstanceDescriptor, Limits, LoadOp, MemoryHints,
+    MultisampleState, Operations, PowerPreference, PrimitiveState, Queue,
+    RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RequestAdapterOptions,
+    StoreOp, Surface, SurfaceConfiguration, SurfaceTexture, TextureViewDescriptor, VertexStepMode,
 };
 use winit::{
-    application::ApplicationHandler, dpi::PhysicalSize, event_loop::EventLoop, window::Window,
+    application::ApplicationHandler,
+    dpi::PhysicalSize,
+    event::WindowEvent,
+    event_loop::{ActiveEventLoop, EventLoop},
+    window::{Window, WindowId},
 };
 
 #[allow(dead_code)]
 mod shader;
+
+#[derive(Default)]
+struct State {
+    wgpu: Option<WgpuState>,
+    app: AppState,
+}
 
 struct WgpuState {
     window: Arc<Window>,
@@ -158,24 +170,106 @@ impl Default for AppState {
         }
     }
 }
-impl ApplicationHandler for AppState {
-    fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {}
+impl State {
+    fn redraw(&mut self) {
+        let wgpu_state = self.wgpu.as_mut().unwrap();
+
+        let frame = wgpu_state.surface.get_current_texture().unwrap();
+        let view = frame.texture.create_view(&TextureViewDescriptor::default());
+
+        let mut encoder = wgpu_state
+            .device
+            .create_command_encoder(&CommandEncoderDescriptor {
+                label: Some("Render encoder"),
+            });
+
+        {
+            let mut render_pass = encoder.begin_render_pass(&RenderPassDescriptor {
+                label: Some("Render pass"),
+                color_attachments: &[Some(RenderPassColorAttachment {
+                    view: &view,
+                    resolve_target: None,
+                    ops: Operations {
+                        load: LoadOp::Clear(Color::BLACK),
+                        store: StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+            });
+            render_pass.set_pipeline(&wgpu_state.pipeline);
+
+            let mut app_state_bytes = UniformBuffer::new(Vec::<u8>::new());
+            app_state_bytes.write(&self.app).unwrap();
+
+            wgpu_state.queue.write_buffer(
+                &wgpu_state.uniform_buffer,
+                0,
+                &app_state_bytes.into_inner(),
+            );
+
+            shader::set_bind_groups(&mut render_pass, &wgpu_state.bind_group0);
+
+            render_pass.draw(0..3, 0..1);
+        }
+        wgpu_state.queue.submit(Some(encoder.finish()));
+        frame.present();
+    }
+}
+impl ApplicationHandler for State {
+    fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
+        let window = Arc::new(
+            event_loop
+                .create_window(Window::default_attributes())
+                .unwrap(),
+        );
+        self.wgpu = Some(pollster::block_on(WgpuState::new(window)));
+    }
     fn window_event(
         &mut self,
-        event_loop: &winit::event_loop::ActiveEventLoop,
-        window_id: winit::window::WindowId,
-        event: winit::event::WindowEvent,
+        event_loop: &ActiveEventLoop,
+        window_id: WindowId,
+        event: WindowEvent,
     ) {
+        match event {
+            WindowEvent::Resized(new_size) => {
+                let wgpu_state = self.wgpu.as_mut().unwrap();
+                wgpu_state.resize(new_size);
+                wgpu_state.window.request_redraw();
+            }
+            WindowEvent::CloseRequested => todo!(),
+            WindowEvent::Destroyed => todo!(),
+            WindowEvent::CursorMoved {
+                device_id,
+                position,
+            } => todo!(),
+            WindowEvent::MouseWheel {
+                device_id,
+                delta,
+                phase,
+            } => todo!(),
+            WindowEvent::MouseInput {
+                device_id,
+                state,
+                button,
+            } => todo!(),
+            WindowEvent::RedrawRequested => self.redraw(),
+            event => {
+                dbg!(event);
+            }
+        }
     }
 }
 
-async fn run(event_loop: EventLoop<()>, window: Arc<Window>) {
-    let mut wgpu_state = WgpuState::new(window).await;
-    let mut state = AppState::default();
-
-    let main_window_id = wgpu_state.window.id();
+fn run(event_loop: EventLoop<()>) {
+    let mut state = State::default();
 
     event_loop.run_app(&mut state).unwrap();
 }
 
-fn main() {}
+fn main() {
+    let event_loop = EventLoop::new().unwrap();
+
+    run(event_loop);
+}
