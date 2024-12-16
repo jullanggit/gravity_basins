@@ -1,4 +1,4 @@
-use std::{borrow::Cow, mem::MaybeUninit, sync::Arc};
+use std::{mem::MaybeUninit, sync::Arc};
 
 use encase::{ShaderSize, UniformBuffer};
 use shader::{AppState, Graviton, Gravitons, bind_groups::BindGroup0};
@@ -7,7 +7,7 @@ use wgpu::{
     DeviceDescriptor, Features, Instance, InstanceDescriptor, Limits, LoadOp, MemoryHints,
     MultisampleState, Operations, PowerPreference, PrimitiveState, Queue,
     RenderPassColorAttachment, RenderPassDescriptor, RenderPipeline, RequestAdapterOptions,
-    StoreOp, Surface, SurfaceConfiguration, SurfaceTexture, TextureViewDescriptor, VertexStepMode,
+    StoreOp, Surface, SurfaceConfiguration, TextureViewDescriptor, VertexStepMode,
 };
 use winit::{
     application::ApplicationHandler,
@@ -162,7 +162,7 @@ impl Gravitons {
 impl Default for AppState {
     fn default() -> Self {
         Self {
-            position: [0., 0.],
+            position: glam::Vec2::ZERO,
             zoom: 1.,
             drag: 0.02,
             delta_t: 0.05,
