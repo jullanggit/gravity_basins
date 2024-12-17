@@ -247,20 +247,23 @@ impl ApplicationHandler for State {
             // TODO: Maybe change this to exit a bit more cleanly
             WindowEvent::CloseRequested => panic!("Close requested"),
             WindowEvent::Destroyed => todo!(),
-            WindowEvent::CursorMoved {
-                device_id,
-                position,
-            } => todo!(),
+            // TODO: Implement graviton dragging
+            // WindowEvent::CursorMoved {
+            //     device_id,
+            //     position,
+            // } => todo!(),
+            // TODO: Implement zooming
             WindowEvent::MouseWheel {
                 device_id,
                 delta,
                 phase,
             } => todo!(),
-            WindowEvent::MouseInput {
-                device_id,
-                state,
-                button,
-            } => todo!(),
+            // TODO: Implement graviton dragging
+            // WindowEvent::MouseInput {
+            //     device_id,
+            //     state,
+            //     button,
+            // } => todo!(),
             WindowEvent::RedrawRequested => self.redraw(),
             event => {
                 dbg!(event);
