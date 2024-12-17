@@ -272,14 +272,9 @@ impl ApplicationHandler for State {
     }
 }
 
-fn run(event_loop: EventLoop<()>) {
+fn main() {
+    let event_loop = EventLoop::new().unwrap();
     let mut state = State::default();
 
     event_loop.run_app(&mut state).unwrap();
-}
-
-fn main() {
-    let event_loop = EventLoop::new().unwrap();
-
-    run(event_loop);
 }
