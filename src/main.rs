@@ -1,6 +1,7 @@
 use std::{mem::MaybeUninit, sync::Arc};
 
 use encase::{ShaderSize, UniformBuffer};
+use glam::{Vec2, Vec4};
 use shader::{AppState, Graviton, Gravitons, bind_groups::BindGroup0};
 use wgpu::{
     Backends, Buffer, BufferDescriptor, BufferUsages, Color, CommandEncoderDescriptor, Device,
@@ -166,12 +167,29 @@ impl Gravitons {
 
 impl Default for AppState {
     fn default() -> Self {
+        let mut gravitons = unsafe { shader::Gravitons::new() };
+        // Red
+        gravitons.push(Graviton {
+            position: Vec2::ZERO,
+            color: Vec4::new(255., 0., 0., 1.),
+        });
+        // Green
+        gravitons.push(Graviton {
+            position: Vec2::new(200., 100.),
+            color: Vec4::new(0., 255., 0., 1.),
+        });
+        // Blue
+        gravitons.push(Graviton {
+            position: Vec2::new(-130., 350.),
+            color: Vec4::new(0., 0., 255., 1.),
+        });
+
         Self {
             position: glam::Vec2::ZERO,
             zoom: 1.,
             drag: 0.02,
             delta_t: 0.05,
-            gravitons: unsafe { shader::Gravitons::new() },
+            gravitons,
         }
     }
 }
