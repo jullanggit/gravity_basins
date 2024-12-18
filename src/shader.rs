@@ -2,7 +2,7 @@
 //
 // ^ wgsl_bindgen version 0.15.2
 // Changes made to this file will not be saved.
-// SourceHash: ea89226b4c9dc98fa8d7630af4babf3b0224f09f005758d7357e14a6ceb16ebe
+// SourceHash: ce6d677e0fc4723725c2ba271ea8bf24245acde0ddea8b87fa2cafd4aaf6544c
 
 #![allow(unused, non_snake_case, non_camel_case_types, non_upper_case_globals)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
@@ -31,34 +31,12 @@ pub mod shader {
     use super::{_root, _root::*};
     #[repr(C)]
     #[derive(Debug, PartialEq, Clone, Copy, encase::ShaderType)]
-    pub struct Graviton {
-        pub position: glam::Vec2,
-        pub color: glam::Vec4,
-    }
-    impl Graviton {
-        pub const fn new(position: glam::Vec2, color: glam::Vec4) -> Self {
-            Self { position, color }
-        }
-    }
-    #[repr(C)]
-    #[derive(Debug, PartialEq, Clone, Copy, encase::ShaderType)]
-    pub struct Gravitons {
-        pub length: u32,
-        pub gravitons: [Graviton; 256],
-    }
-    impl Gravitons {
-        pub const fn new(length: u32, gravitons: [Graviton; 256]) -> Self {
-            Self { length, gravitons }
-        }
-    }
-    #[repr(C)]
-    #[derive(Debug, PartialEq, Clone, Copy, encase::ShaderType)]
     pub struct AppState {
         pub position: glam::Vec2,
         pub zoom: f32,
         pub drag: f32,
         pub delta_t: f32,
-        pub gravitons: Gravitons,
+        pub num_gravitons: u32,
     }
     impl AppState {
         pub const fn new(
@@ -66,15 +44,26 @@ pub mod shader {
             zoom: f32,
             drag: f32,
             delta_t: f32,
-            gravitons: Gravitons,
+            num_gravitons: u32,
         ) -> Self {
             Self {
                 position,
                 zoom,
                 drag,
                 delta_t,
-                gravitons,
+                num_gravitons,
             }
+        }
+    }
+    #[repr(C)]
+    #[derive(Debug, PartialEq, Clone, Copy, encase::ShaderType)]
+    pub struct Graviton {
+        pub position: glam::Vec2,
+        pub color: glam::Vec4,
+    }
+    impl Graviton {
+        pub const fn new(position: glam::Vec2, color: glam::Vec4) -> Self {
+            Self { position, color }
         }
     }
     #[repr(C)]
@@ -103,10 +92,12 @@ pub mod shader {
     #[derive(Debug)]
     pub struct WgpuBindGroup0EntriesParams<'a> {
         pub app_state: wgpu::BufferBinding<'a>,
+        pub gravitons: wgpu::BufferBinding<'a>,
     }
     #[derive(Clone, Debug)]
     pub struct WgpuBindGroup0Entries<'a> {
         pub app_state: wgpu::BindGroupEntry<'a>,
+        pub gravitons: wgpu::BindGroupEntry<'a>,
     }
     impl<'a> WgpuBindGroup0Entries<'a> {
         pub fn new(params: WgpuBindGroup0EntriesParams<'a>) -> Self {
@@ -115,10 +106,14 @@ pub mod shader {
                     binding: 0,
                     resource: wgpu::BindingResource::Buffer(params.app_state),
                 },
+                gravitons: wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Buffer(params.gravitons),
+                },
             }
         }
-        pub fn as_array(self) -> [wgpu::BindGroupEntry<'a>; 1] {
-            [self.app_state]
+        pub fn as_array(self) -> [wgpu::BindGroupEntry<'a>; 2] {
+            [self.app_state, self.gravitons]
         }
         pub fn collect<B: FromIterator<wgpu::BindGroupEntry<'a>>>(self) -> B {
             self.as_array().into_iter().collect()
@@ -140,6 +135,19 @@ pub mod shader {
                         min_binding_size: std::num::NonZeroU64::new(
                             std::mem::size_of::<_root::shader::AppState>() as _,
                         ),
+                    },
+                    count: None,
+                },
+                /// @binding(1): "gravitons"
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage {
+                            read_only: true,
+                        },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
                     },
                     count: None,
                 },
@@ -273,22 +281,17 @@ pub mod shader {
             })
     }
     pub const SHADER_STRING: &'static str = r#"
-struct Graviton {
-    position: vec2<f32>,
-    color: vec4<f32>,
-}
-
-struct Gravitons {
-    length: u32,
-    gravitons: array<Graviton, 256>,
-}
-
 struct AppState {
     position: vec2<f32>,
     zoom: f32,
     drag: f32,
     delta_t: f32,
-    gravitons: Gravitons,
+    num_gravitons: u32,
+}
+
+struct Graviton {
+    position: vec2<f32>,
+    color: vec4<f32>,
 }
 
 struct VertexInput {
@@ -304,6 +307,8 @@ const MAX_GRAVITONS: u32 = 256u;
 
 @group(0) @binding(0) 
 var<uniform> app_state: AppState;
+@group(0) @binding(1) 
+var<storage> gravitons: array<Graviton>;
 
 @vertex 
 fn vs_main(in: VertexInput) -> VertexOutput {

@@ -38,6 +38,7 @@ struct WgpuState {
     pipeline: RenderPipeline,
     bind_group0: BindGroup0,
     uniform_buffer: Buffer,
+    storage_buffer: Buffer,
 }
 impl WgpuState {
     async fn new(window: Arc<Window>) -> Self {
@@ -111,10 +112,18 @@ impl WgpuState {
 
         // Create the uniform buffer
         let uniform_buffer = device.create_buffer(&BufferDescriptor {
-            label: None,
+            label: Some("App state"),
             // TODO: see if this is right
             size: shader::AppState::SHADER_SIZE.into(),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        // Create storage buffer
+        let storage_buffer = device.create_buffer(&BufferDescriptor {
+            label: Some("Gravitons"),
+            size: Into::<u64>::into(Graviton::SHADER_SIZE) * 5,
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
@@ -123,6 +132,7 @@ impl WgpuState {
             &device,
             shader::bind_groups::BindGroupLayout0 {
                 app_state: uniform_buffer.as_entire_buffer_binding(),
+                gravitons: storage_buffer.as_entire_buffer_binding(),
             },
         );
 
@@ -136,6 +146,7 @@ impl WgpuState {
             pipeline,
             bind_group0,
             uniform_buffer,
+            storage_buffer,
         }
     }
     pub fn resize(&mut self, new_size: winit::dpi::PhysicalSize<u32>) {
