@@ -7,6 +7,10 @@ edition = "2021"
 members = ["shaders/shader_test"]
 
 [dependencies]
+wgpu = { version = "25.0.2", default-features = false, features = [
+  "vulkan",
+  "spirv",
+] }
 
 [build-dependencies]
 # use the main branch (or pin to a specific rev/branch/tag)
