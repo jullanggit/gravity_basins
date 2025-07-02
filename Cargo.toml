@@ -9,7 +9,10 @@ members = ["shaders/shader_test"]
 [dependencies]
 
 [build-dependencies]
-spirv-builder = "0.9"
+# use the main branch (or pin to a specific rev/branch/tag)
+spirv-builder = { git = "https://github.com/Rust-GPU/rust-gpu.git", package = "spirv-builder", default-features = false, features = [
+  "use-installed-tools",
+] }
 
 [profile.release.build-override]
 opt-level = 3
