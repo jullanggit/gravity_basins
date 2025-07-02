@@ -1,0 +1,18 @@
+[package]
+name = "compute-shaders"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+members = ["shaders/shader_test"]
+
+[dependencies]
+
+[build-dependencies]
+spirv-builder = "0.9"
+
+[profile.release.build-override]
+opt-level = 3
+codegen-units = 16
+[profile.dev.build-override]
+opt-level = 3
