@@ -7,9 +7,17 @@ edition = "2021"
 members = ["shaders/shader_test"]
 
 [dependencies]
+anyhow = "1.0.98"
+env_logger = "0.11.8"
+log = "0.4.27"
+pollster = "0.4.0"
 wgpu = { version = "25.0.2", default-features = false, features = [
   "vulkan",
   "spirv",
+] }
+winit = { version = "0.30.11", default-features = false, features = [
+  "rwh_06",
+  "wayland",
 ] }
 
 [build-dependencies]
