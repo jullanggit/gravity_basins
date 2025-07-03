@@ -1,7 +1,7 @@
 use spirv_std::glam::vec2;
 use wgpu::include_spirv;
 
-use shader_test::{Data, Graviton};
+use shader::{Data, Graviton};
 use std::{array, sync::Arc};
 
 use winit::{
