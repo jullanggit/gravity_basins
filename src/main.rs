@@ -1,6 +1,8 @@
+use spirv_std::glam::vec2;
 use wgpu::include_spirv;
 
-use std::sync::Arc;
+use shader_test::{Data, Graviton};
+use std::{array, sync::Arc};
 
 use winit::{
     application::ApplicationHandler,
@@ -18,6 +20,7 @@ pub struct State {
     is_surface_configured: bool,
     render_pipeline: wgpu::RenderPipeline,
     window: Arc<Window>,
+    data: Data,
 }
 
 impl State {
@@ -44,9 +47,9 @@ impl State {
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: None,
-                required_features: wgpu::Features::empty(),
+                required_features: wgpu::Features::PUSH_CONSTANTS,
                 required_limits: wgpu::Limits::default(),
-                memory_hints: Default::default(),
+                memory_hints: wgpu::MemoryHints::Performance,
                 trace: wgpu::Trace::Off,
             })
             .await?;
@@ -67,7 +70,7 @@ impl State {
             format: surface_format,
             width: size.width,
             height: size.height,
-            present_mode: surface_caps.present_modes[0],
+            present_mode: wgpu::PresentMode::AutoVsync,
             alpha_mode: surface_caps.alpha_modes[0],
             view_formats: vec![],
             desired_maximum_frame_latency: 2,
@@ -79,7 +82,10 @@ impl State {
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
                 bind_group_layouts: &[],
-                push_constant_ranges: &[],
+                push_constant_ranges: &[wgpu::PushConstantRange {
+                    stages: wgpu::ShaderStages::FRAGMENT,
+                    range: 0..std::mem::size_of::<Data>() as u32,
+                }],
             });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -121,6 +127,13 @@ impl State {
             cache: None,
         });
 
+        let data = Data::new(array::from_fn(|i| match i {
+            0 => Some(Graviton::new(vec2(200., 100.), Vec4::new(1., 0., 0., 1.))),
+            1 => Some(Graviton::new(vec2(-300., 400.), Vec4::new(0., 1., 0., 1.))),
+            2 => Some(Graviton::new(vec2(450., -50.), Vec4::new(0., 0., 1., 1.))),
+            _ => None,
+        }));
+
         Ok(Self {
             surface,
             device,
@@ -129,6 +142,7 @@ impl State {
             is_surface_configured: false,
             render_pipeline,
             window,
+            data,
         })
     }
 
@@ -187,6 +201,7 @@ impl State {
                 timestamp_writes: None,
             });
             render_pass.set_pipeline(&self.render_pipeline);
+            render_pass.set_push_constants(wgpu::ShaderStages::FRAGMENT, 0, todo!());
             render_pass.draw(0..3, 0..1);
         }
 

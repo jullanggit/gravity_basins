@@ -7,23 +7,25 @@ edition = "2021"
 members = ["shaders/shader_test"]
 
 [dependencies]
+shader_test = { path = "shaders/shader_test" }
+spirv-std = { git = "https://github.com/Rust-GPU/rust-gpu.git", package = "spirv-std" }
 anyhow = "1.0.98"
 env_logger = "0.11.8"
 log = "0.4.27"
 pollster = "0.4.0"
 wgpu = { version = "25.0.2", default-features = false, features = [
-  "vulkan",
-  "spirv",
+    "vulkan",
+    "spirv",
 ] }
 winit = { version = "0.30.11", default-features = false, features = [
-  "rwh_06",
-  "wayland",
+    "rwh_06",
+    "wayland",
 ] }
 
 [build-dependencies]
 # use the main branch (or pin to a specific rev/branch/tag)
 spirv-builder = { git = "https://github.com/Rust-GPU/rust-gpu.git", package = "spirv-builder", default-features = false, features = [
-  "use-installed-tools",
+    "use-installed-tools",
 ] }
 
 [profile.release.build-override]
