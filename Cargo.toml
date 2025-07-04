@@ -1,5 +1,5 @@
 [package]
-name = "gravity-basins-2"
+name = "gravity-basins"
 version = "0.1.0"
 edition = "2021"
 
