@@ -50,7 +50,7 @@ impl State {
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: None,
-                required_features: wgpu::Features::PUSH_CONSTANTS,
+                required_features: wgpu::Features::empty(),
                 required_limits: wgpu::Limits::default(),
                 memory_hints: wgpu::MemoryHints::Performance,
                 trace: wgpu::Trace::Off,
@@ -81,9 +81,9 @@ impl State {
 
         let data = Data::new(
             array::from_fn(|i| match i {
-                0 => Graviton::new([200., 100.], [1., 0., 0.]),
-                1 => Graviton::new([-300., 400.], [0., 1., 0.]),
-                2 => Graviton::new([450., -50.], [0., 0., 1.]),
+                0 => Graviton::new(200., 100., 1., 0., 0.),
+                1 => Graviton::new(-300., 400., 0., 1., 0.),
+                2 => Graviton::new(450., -50., 0., 0., 1.),
                 _ => Graviton::zeroed(),
             }),
             3,
@@ -122,10 +122,7 @@ impl State {
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
                 bind_group_layouts: &[&data_bind_group_layout],
-                push_constant_ranges: &[wgpu::PushConstantRange {
-                    stages: wgpu::ShaderStages::FRAGMENT,
-                    range: 0..std::mem::size_of::<Data>() as u32,
-                }],
+                push_constant_ranges: &[],
             });
 
         let render_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -236,7 +233,7 @@ impl State {
                 timestamp_writes: None,
             });
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(1, &self.data_bind_group, &[]);
+            render_pass.set_bind_group(0, &self.data_bind_group, &[]);
             render_pass.draw(0..3, 0..1);
         }
 
