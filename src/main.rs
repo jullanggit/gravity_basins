@@ -1,6 +1,6 @@
 use bytemuck::Zeroable;
 use spirv_std::glam::vec2;
-use wgpu::include_spirv;
+use wgpu::{include_spirv, util::DeviceExt};
 
 use shader::{Data, Graviton};
 use std::{array, sync::Arc};
@@ -22,6 +22,8 @@ pub struct State {
     render_pipeline: wgpu::RenderPipeline,
     window: Arc<Window>,
     data: Data,
+    data_buffer: wgpu::Buffer,
+    data_bind_group: wgpu::BindGroup,
 }
 
 impl State {
@@ -77,12 +79,49 @@ impl State {
             desired_maximum_frame_latency: 2,
         };
 
+        let data = Data::new(
+            array::from_fn(|i| match i {
+                0 => Graviton::new([200., 100.], [1., 0., 0.]),
+                1 => Graviton::new([-300., 400.], [0., 1., 0.]),
+                2 => Graviton::new([450., -50.], [0., 0., 1.]),
+                _ => Graviton::zeroed(),
+            }),
+            3,
+        );
+        let data_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Data Buffer"),
+            contents: bytemuck::cast_slice(&[data]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+        let data_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+                label: Some("data_bind_group_layout"),
+            });
+        let data_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &data_bind_group_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: data_buffer.as_entire_binding(),
+            }],
+            label: Some("data_bind_group"),
+        });
+
         let shader = device.create_shader_module(include_spirv!(env!("shader.spv")));
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[],
+                bind_group_layouts: &[&data_bind_group_layout],
                 push_constant_ranges: &[wgpu::PushConstantRange {
                     stages: wgpu::ShaderStages::FRAGMENT,
                     range: 0..std::mem::size_of::<Data>() as u32,
@@ -128,16 +167,6 @@ impl State {
             cache: None,
         });
 
-        let data = Data::new(
-            array::from_fn(|i| match i {
-                0 => Graviton::new([200., 100.], [1., 0., 0.]),
-                1 => Graviton::new([-300., 400.], [0., 1., 0.]),
-                2 => Graviton::new([450., -50.], [0., 0., 1.]),
-                _ => Graviton::zeroed(),
-            }),
-            3,
-        );
-
         Ok(Self {
             surface,
             device,
@@ -147,6 +176,8 @@ impl State {
             render_pipeline,
             window,
             data,
+            data_buffer,
+            data_bind_group,
         })
     }
 
@@ -205,11 +236,7 @@ impl State {
                 timestamp_writes: None,
             });
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_push_constants(
-                wgpu::ShaderStages::FRAGMENT,
-                0,
-                bytemuck::bytes_of(&self.data),
-            );
+            render_pass.set_bind_group(1, &self.data_bind_group, &[]);
             render_pass.draw(0..3, 0..1);
         }
 

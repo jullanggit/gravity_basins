@@ -34,7 +34,7 @@ impl Graviton {
 #[spirv(fragment)]
 pub fn fs_main(
     #[spirv(frag_coord)] coord: Vec4,
-    #[spirv(push_constant)] data: &Data,
+    #[spirv(uniform, descriptor_set = 1, binding = 0)] data: &Data,
     output: &mut Vec4,
 ) {
     *output = if coord.x < 400. {
