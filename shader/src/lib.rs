@@ -1,23 +1,32 @@
 #![no_std]
 
+use bytemuck::{Pod, Zeroable};
 use spirv_std::glam::{vec4, Vec2, Vec4};
 use spirv_std::spirv;
 
+#[derive(Pod, Zeroable, Clone, Copy)]
+#[repr(C)]
 pub struct Data {
-    pub gravitons: [Option<Graviton>; 32],
+    pub gravitons: [Graviton; 32],
+    pub num_gravitons: u32,
 }
 impl Data {
-    pub fn new(gravitons: [Option<Graviton>; 32]) -> Self {
-        Self { gravitons }
+    pub fn new(gravitons: [Graviton; 32], num_gravitons: u32) -> Self {
+        Self {
+            gravitons,
+            num_gravitons,
+        }
     }
 }
 
+#[derive(Pod, Zeroable, Clone, Copy)]
+#[repr(C)]
 pub struct Graviton {
-    pub position: Vec2,
-    pub color: Vec4,
+    pub position: [f32; 2],
+    pub color: [f32; 3],
 }
 impl Graviton {
-    pub fn new(position: Vec2, color: Vec4) -> Self {
+    pub fn new(position: [f32; 2], color: [f32; 3]) -> Self {
         Self { position, color }
     }
 }

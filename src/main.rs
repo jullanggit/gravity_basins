@@ -1,3 +1,4 @@
+use bytemuck::Zeroable;
 use spirv_std::glam::vec2;
 use wgpu::include_spirv;
 
@@ -76,7 +77,7 @@ impl State {
             desired_maximum_frame_latency: 2,
         };
 
-        let shader = device.create_shader_module(include_spirv!(env!("shader_test.spv")));
+        let shader = device.create_shader_module(include_spirv!(env!("shader.spv")));
 
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -127,12 +128,15 @@ impl State {
             cache: None,
         });
 
-        let data = Data::new(array::from_fn(|i| match i {
-            0 => Some(Graviton::new(vec2(200., 100.), Vec4::new(1., 0., 0., 1.))),
-            1 => Some(Graviton::new(vec2(-300., 400.), Vec4::new(0., 1., 0., 1.))),
-            2 => Some(Graviton::new(vec2(450., -50.), Vec4::new(0., 0., 1., 1.))),
-            _ => None,
-        }));
+        let data = Data::new(
+            array::from_fn(|i| match i {
+                0 => Graviton::new([200., 100.], [1., 0., 0.]),
+                1 => Graviton::new([-300., 400.], [0., 1., 0.]),
+                2 => Graviton::new([450., -50.], [0., 0., 1.]),
+                _ => Graviton::zeroed(),
+            }),
+            3,
+        );
 
         Ok(Self {
             surface,
@@ -201,7 +205,11 @@ impl State {
                 timestamp_writes: None,
             });
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_push_constants(wgpu::ShaderStages::FRAGMENT, 0, todo!());
+            render_pass.set_push_constants(
+                wgpu::ShaderStages::FRAGMENT,
+                0,
+                bytemuck::bytes_of(&self.data),
+            );
             render_pass.draw(0..3, 0..1);
         }
 
