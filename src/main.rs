@@ -81,9 +81,9 @@ impl State {
 
         let data = Data::new(
             array::from_fn(|i| match i {
-                0 => Graviton::new(200., 100., 1., 0., 0.),
-                1 => Graviton::new(-300., 400., 0., 1., 0.),
-                2 => Graviton::new(450., -50., 0., 0., 1.),
+                0 => Graviton::new(200., 100., 1., 0., 0., 1.),
+                1 => Graviton::new(300., 400., 0., 1., 0., 1.),
+                2 => Graviton::new(450., 50., 0., 0., 1., 1.),
                 _ => Graviton::zeroed(),
             }),
             3,
