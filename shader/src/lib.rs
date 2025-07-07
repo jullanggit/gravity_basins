@@ -68,18 +68,20 @@ pub fn fs_main(
     output: &mut Vec4,
 ) {
     const LIMIT: f32 = 100. * 100.;
-    const DT: f32 = 0.01;
     // find where the pixel falls into
     let mut coord = coord.xy();
     let mut velocity = Vec2::ZERO;
     for _ in 0..1000 {
         let mut delta_velocity = Vec2::ZERO;
+        let mut min_distance = f32::MAX;
         for i in 0..data.num_gravitons {
             let graviton = data.gravitons[i as usize];
             let graviton_pos = vec2(graviton.position_x, graviton.position_y);
 
             // calculate gravity
             let distance_squared = graviton_pos.distance_squared(coord);
+            let distance = distance_squared.sqrt();
+            min_distance = min_distance.min(distance);
             // check if inside graviton
             if distance_squared < LIMIT {
                 // return color
@@ -87,11 +89,12 @@ pub fn fs_main(
                 return;
             }
             let vector = graviton_pos - coord;
-            delta_velocity +=
-                vector * (graviton.mass / (distance_squared * distance_squared.sqrt()));
+            delta_velocity += vector * (graviton.mass / (distance_squared * distance));
         }
-        velocity += delta_velocity * DT;
-        coord += velocity * DT;
+        // make bigger steps if far from any gravitons
+        let dt = (min_distance * 0.1).clamp(0.002, 0.05);
+        velocity += delta_velocity * dt;
+        coord += velocity * dt;
     }
 }
 
