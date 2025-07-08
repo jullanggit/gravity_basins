@@ -1,5 +1,4 @@
 use bytemuck::Zeroable;
-use spirv_std::glam::vec2;
 use wgpu::{include_spirv, util::DeviceExt};
 
 use shader::{Data, Graviton};

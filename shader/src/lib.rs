@@ -2,7 +2,8 @@
 
 use bytemuck::{Pod, Zeroable};
 use spirv_std::{
-    glam::{vec2, vec4, Vec2, Vec4, Vec4Swizzles},
+    glam::{vec2, vec4, UVec3, Vec2, Vec3Swizzles, Vec4, Vec4Swizzles},
+    image::StorageImage2d,
     num_traits::Float,
     spirv,
 };
@@ -61,15 +62,15 @@ impl Graviton {
     }
 }
 
-#[spirv(fragment)]
-pub fn fs_main(
-    #[spirv(frag_coord)] coord: Vec4,
+#[spirv(compute(threads(16, 16)))]
+pub fn cs_main(
+    #[spirv(global_invocation_id)] id: UVec3,
     #[spirv(uniform, descriptor_set = 0, binding = 0)] data: &Data,
-    output: &mut Vec4,
+    #[spirv(image, descriptor_set = 0, binding = 1)] output: &mut StorageImage2d,
 ) {
     const LIMIT: f32 = 100. * 100.;
     // find where the pixel falls into
-    let mut coord = coord.xy();
+    let mut coord = id.as_vec3().xy();
     let mut velocity = Vec2::ZERO;
     for _ in 0..1000 {
         let mut min_distance_squared = f32::MAX;
@@ -82,8 +83,14 @@ pub fn fs_main(
             min_distance_squared = min_distance_squared.min(distance_squared);
             // check if inside graviton
             if distance_squared < LIMIT {
-                // return color
-                *output = vec4(graviton.color_r, graviton.color_g, graviton.color_b, 1.);
+                // no documentation for why this is unsafe
+                unsafe {
+                    // return color
+                    output.write(
+                        id.truncate(),
+                        vec4(graviton.color_r, graviton.color_g, graviton.color_b, 1.),
+                    );
+                }
                 return;
             }
         }
