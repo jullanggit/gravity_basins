@@ -1,5 +1,9 @@
 use bytemuck::Zeroable;
-use wgpu::{include_spirv, util::DeviceExt};
+use spirv_std::{
+    image::{Image1d, StorageImage2d},
+    Image,
+};
+use wgpu::{include_spirv, util::DeviceExt, BindingResource};
 
 use shader::{Data, Graviton};
 use std::{array, sync::Arc};
@@ -22,7 +26,7 @@ pub struct State {
     window: Arc<Window>,
     data: Data,
     data_buffer: wgpu::Buffer,
-    data_bind_group: wgpu::BindGroup,
+    bind_group: wgpu::BindGroup,
 }
 
 impl State {
@@ -92,27 +96,62 @@ impl State {
             contents: bytemuck::cast_slice(&[data]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
-        let data_bind_group_layout =
-            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                entries: &[wgpu::BindGroupLayoutEntry {
+        let texture_size = wgpu::Extent3d {
+            width: 1920,
+            height: 1080,
+            depth_or_array_layers: 1,
+        };
+        let storage_texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Texture"),
+            size: texture_size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba32Float,
+            usage: wgpu::TextureUsages::STORAGE_BINDING
+                | wgpu::TextureUsages::COPY_SRC
+                | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[wgpu::TextureFormat::Rgba32Float],
+        });
+        let storage_view = storage_texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let bind_group_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            entries: &[
+                wgpu::BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    visibility: wgpu::ShaderStages::COMPUTE,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
                         min_binding_size: None,
                     },
                     count: None,
-                }],
-                label: Some("data_bind_group_layout"),
-            });
-        let data_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            layout: &data_bind_group_layout,
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: data_buffer.as_entire_binding(),
-            }],
-            label: Some("data_bind_group"),
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::StorageTexture {
+                        access: wgpu::StorageTextureAccess::WriteOnly,
+                        format: wgpu::TextureFormat::Rgba32Float,
+                        view_dimension: wgpu::TextureViewDimension::D2,
+                    },
+                    count: None,
+                },
+            ],
+            label: Some("bind_group_layout"),
+        });
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: data_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: BindingResource::TextureView(&storage_view),
+                },
+            ],
+            label: Some("bind_group"),
         });
 
         let shader = device.create_shader_module(include_spirv!(env!("shader.spv")));
@@ -120,7 +159,7 @@ impl State {
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&data_bind_group_layout],
+                bind_group_layouts: &[&bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -173,7 +212,7 @@ impl State {
             window,
             data,
             data_buffer,
-            data_bind_group,
+            bind_group,
         })
     }
 
@@ -231,7 +270,7 @@ impl State {
                 timestamp_writes: None,
             });
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, &self.data_bind_group, &[]);
+            render_pass.set_bind_group(0, &self.bind_group, &[]);
             render_pass.draw(0..3, 0..1);
         }
 
