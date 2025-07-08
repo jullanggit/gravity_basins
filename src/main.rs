@@ -188,6 +188,7 @@ impl State {
             self.config.height = height;
             self.surface.configure(&self.device, &self.config);
             self.is_surface_configured = true;
+            self.window.request_redraw();
         }
     }
 
@@ -199,8 +200,6 @@ impl State {
     }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
-        self.window.request_redraw();
-
         // We can't render unless the surface is configured
         if !self.is_surface_configured {
             return Ok(());
