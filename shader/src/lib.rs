@@ -5,7 +5,7 @@ use spirv_std::{
     glam::{vec2, vec4, UVec3, Vec2, Vec3Swizzles, Vec4, Vec4Swizzles},
     image::StorageImage2d,
     num_traits::Float,
-    spirv, Image,
+    spirv, Image, Sampler,
 };
 
 #[derive(Pod, Zeroable, Clone, Copy, Default)]
@@ -157,4 +157,14 @@ pub fn vs_main(#[spirv(vertex_index)] idx: u32, #[spirv(position, invariant)] ou
     let x = if idx == 1 { 3. } else { -1. };
     let y = if idx == 2 { 3. } else { -1. };
     *out_pos = vec4(x, y, 0., 1.);
+}
+
+#[spirv(fragment)]
+pub fn fs_main(
+    #[spirv(frag_coord)] coord: Vec4,
+    #[spirv(descriptor_set = 0, binding = 0)] texture: &Image!(2D, format = rgba32f, sampled),
+    #[spirv(descriptor_set = 0, binding = 1)] sampler: &Sampler,
+    out_color: &mut Vec4,
+) {
+    *out_color = texture.sample(*sampler, coord.xy());
 }

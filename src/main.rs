@@ -3,7 +3,7 @@ use spirv_std::{
     image::{Image1d, StorageImage2d},
     Image,
 };
-use wgpu::{include_spirv, util::DeviceExt, BindingResource};
+use wgpu::{include_spirv, naga::Binding, util::DeviceExt, BindingResource};
 
 use shader::{Data, Graviton};
 use std::{array, sync::Arc};
@@ -22,11 +22,14 @@ pub struct State {
     queue: wgpu::Queue,
     config: wgpu::SurfaceConfiguration,
     is_surface_configured: bool,
+    compute_pipeline: wgpu::ComputePipeline,
     render_pipeline: wgpu::RenderPipeline,
     window: Arc<Window>,
     data: Data,
     data_buffer: wgpu::Buffer,
-    bind_group: wgpu::BindGroup,
+    compute_bind_group: wgpu::BindGroup,
+    render_bind_group: wgpu::BindGroup,
+    compute_gravity_basins: bool,
 }
 
 impl State {
@@ -87,7 +90,7 @@ impl State {
                 0 => Graviton::new(200., 100., 1., 0., 0., 1.),
                 1 => Graviton::new(300., 400., 0., 1., 0., 1.),
                 2 => Graviton::new(450., 50., 0., 0., 1., 1.),
-                _ => Graviton::zeroed(),
+                _ => Graviton::default(),
             }),
             3,
         );
@@ -108,9 +111,10 @@ impl State {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: wgpu::TextureFormat::Rgba32Float,
-            usage: wgpu::TextureUsages::STORAGE_BINDING
+            usage: wgpu::TextureUsages::STORAGE_BINDING // compute
                 | wgpu::TextureUsages::COPY_SRC
-                | wgpu::TextureUsages::COPY_DST,
+                | wgpu::TextureUsages::COPY_DST
+                | wgpu::TextureUsages::TEXTURE_BINDING, // fragment
             view_formats: &[wgpu::TextureFormat::Rgba32Float],
         });
         let storage_view = storage_texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -173,10 +177,60 @@ impl State {
             entry_point: Some("cs_main"),
         });
 
+        let address_mode = wgpu::AddressMode::ClampToEdge;
+        let filter_mode = wgpu::FilterMode::Linear;
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("Sampler"),
+            address_mode_u: address_mode,
+            address_mode_v: address_mode,
+            address_mode_w: address_mode,
+            mag_filter: filter_mode,
+            min_filter: filter_mode,
+            mipmap_filter: wgpu::FilterMode::Nearest,
+            ..Default::default()
+        });
+
+        let render_bind_group_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Render bind group"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::NonFiltering),
+                        count: None,
+                    },
+                ],
+            });
+        let render_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Render bind group"),
+            layout: &render_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: BindingResource::TextureView(&storage_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: BindingResource::Sampler(&sampler),
+                },
+            ],
+        });
+
         let render_pipeline_layout =
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Render Pipeline Layout"),
-                bind_group_layouts: &[&compute_bind_group_layout],
+                bind_group_layouts: &[&render_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -225,11 +279,14 @@ impl State {
             queue,
             config,
             is_surface_configured: false,
+            compute_pipeline,
             render_pipeline,
             window,
             data,
             data_buffer,
-            bind_group: compute_bind_group,
+            compute_bind_group,
+            render_bind_group,
+            compute_gravity_basins: true,
         })
     }
 
@@ -255,9 +312,15 @@ impl State {
     }
 
     fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+        self.window.request_redraw();
+
         // We can't render unless the surface is configured
         if !self.is_surface_configured {
             return Ok(());
+        }
+
+        if self.compute_gravity_basins {
+            self.compute_gravity_basins();
         }
 
         let output = self.surface.get_current_texture()?;
@@ -287,7 +350,7 @@ impl State {
                 timestamp_writes: None,
             });
             render_pass.set_pipeline(&self.render_pipeline);
-            render_pass.set_bind_group(0, &self.bind_group, &[]);
+            render_pass.set_bind_group(0, &self.render_bind_group, &[]);
             render_pass.draw(0..3, 0..1);
         }
 
@@ -296,6 +359,31 @@ impl State {
         output.present();
 
         Ok(())
+    }
+    fn compute_gravity_basins(&mut self) {
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("Compute Encoder"),
+            });
+
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("Compute Pass"),
+                timestamp_writes: None,
+            });
+            compute_pass.set_pipeline(&self.compute_pipeline);
+            compute_pass.set_bind_group(0, &self.compute_bind_group, &[]);
+            let group_size = (16, 16);
+            compute_pass.dispatch_workgroups(
+                self.config.width.div_ceil(group_size.0),
+                self.config.height.div_ceil(group_size.1),
+                1,
+            );
+        }
+
+        // submit will accept anything that implements IntoIter
+        self.queue.submit(std::iter::once(encoder.finish()));
     }
 }
 
