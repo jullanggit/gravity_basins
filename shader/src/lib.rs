@@ -5,7 +5,7 @@ use spirv_std::{
     glam::{vec2, vec4, UVec3, Vec2, Vec3Swizzles, Vec4, Vec4Swizzles},
     image::StorageImage2d,
     num_traits::Float,
-    spirv,
+    spirv, Image,
 };
 
 #[derive(Pod, Zeroable, Clone, Copy, Default)]
@@ -66,7 +66,11 @@ impl Graviton {
 pub fn cs_main(
     #[spirv(global_invocation_id)] id: UVec3,
     #[spirv(uniform, descriptor_set = 0, binding = 0)] data: &Data,
-    #[spirv(image, descriptor_set = 0, binding = 1)] output: &mut StorageImage2d,
+    #[spirv(descriptor_set = 0, binding = 1)] output: &Image!(
+        2D,
+        format = rgba32f,
+        sampled = false
+    ),
 ) {
     const LIMIT: f32 = 100. * 100.;
     // find where the pixel falls into
@@ -83,7 +87,7 @@ pub fn cs_main(
             min_distance_squared = min_distance_squared.min(distance_squared);
             // check if inside graviton
             if distance_squared < LIMIT {
-                // no documentation for why this is unsafe
+                // no documentation for why this is unsafe (probably because of mutation through shared reference?)
                 unsafe {
                     // return color
                     output.write(
