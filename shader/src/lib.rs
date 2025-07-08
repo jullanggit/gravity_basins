@@ -72,30 +72,72 @@ pub fn fs_main(
     let mut coord = coord.xy();
     let mut velocity = Vec2::ZERO;
     for _ in 0..1000 {
-        let mut delta_velocity = Vec2::ZERO;
-        let mut min_distance = f32::MAX;
+        let mut min_distance_squared = f32::MAX;
         for i in 0..data.num_gravitons {
             let graviton = data.gravitons[i as usize];
             let graviton_pos = vec2(graviton.position_x, graviton.position_y);
 
             // calculate gravity
             let distance_squared = graviton_pos.distance_squared(coord);
-            let distance = distance_squared.sqrt();
-            min_distance = min_distance.min(distance);
+            min_distance_squared = min_distance_squared.min(distance_squared);
             // check if inside graviton
             if distance_squared < LIMIT {
                 // return color
                 *output = vec4(graviton.color_r, graviton.color_g, graviton.color_b, 1.);
                 return;
             }
-            let vector = graviton_pos - coord;
-            delta_velocity += vector * (graviton.mass / (distance_squared * distance));
         }
         // make bigger steps if far from any gravitons
-        let dt = (min_distance * 0.1).clamp(0.002, 0.05);
-        velocity += delta_velocity * dt;
-        coord += velocity * dt;
+        let dt = (min_distance_squared.sqrt() * 0.1).clamp(0.002, 0.05);
+        let [new_coord, new_velocity] = rk4_step(coord, velocity, dt, data);
+        coord = new_coord;
+        velocity = new_velocity;
     }
+}
+
+/// Compute total gravitational acceleration
+fn accel(coord: Vec2, data: &Data) -> Vec2 {
+    let mut acceleration = Vec2::ZERO;
+    for i in 0..data.num_gravitons {
+        let graviton = data.gravitons[i as usize];
+        let graviton_pos = vec2(graviton.position_x, graviton.position_y);
+        let vector = graviton_pos - coord;
+
+        let distance_squared = graviton_pos.distance_squared(coord);
+        let distance = distance_squared.sqrt();
+        acceleration += vector * (graviton.mass / (distance_squared * distance));
+    }
+    acceleration
+}
+
+fn rk4_step(coord: Vec2, velocity: Vec2, dt: f32, data: &Data) -> [Vec2; 2] {
+    // k1
+    let a1 = accel(coord, data);
+    let p1 = velocity;
+
+    // k2
+    let pos2 = coord + p1 * (dt * 0.5);
+    let vel2 = velocity + a1 * (dt * 0.5);
+    let a2 = accel(pos2, data);
+    let p2 = vel2;
+
+    // k3
+    let pos3 = coord + p2 * (dt * 0.5);
+    let vel3 = velocity + a2 * (dt * 0.5);
+    let a3 = accel(pos3, data);
+    let p3 = vel3;
+
+    // k4
+    let pos4 = coord + p3 * dt;
+    let vel4 = velocity + a3 * dt;
+    let a4 = accel(pos4, data);
+    let p4 = vel4;
+
+    // Combine increments
+    let pos_inc = (p1 + p2 * 2.0 + p3 * 2.0 + p4) * (dt / 6.0);
+    let vel_inc = (a1 + a2 * 2.0 + a3 * 2.0 + a4) * (dt / 6.0);
+
+    [coord + pos_inc, velocity + vel_inc]
 }
 
 #[spirv(vertex)]
